@@ -10,6 +10,7 @@
 #include <netinet/tcp.h>
 #include <sys/epoll.h>
 #include "InetAddress.h"
+#include "Socket.h"
 
 int main(int argc, char *argv[])
 {
@@ -20,7 +21,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    int listenfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP);
+    /*int listenfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP);
     if (listenfd < 0)
     {
         perror("socket() failed");
@@ -31,15 +32,16 @@ int main(int argc, char *argv[])
     setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &opt, static_cast<socklen_t>(sizeof opt));
     setsockopt(listenfd, SOL_SOCKET, TCP_NODELAY, &opt, static_cast<socklen_t>(sizeof opt));
     setsockopt(listenfd, SOL_SOCKET, SO_REUSEPORT, &opt, static_cast<socklen_t>(sizeof opt));
-    setsockopt(listenfd, SOL_SOCKET, SO_KEEPALIVE, &opt, static_cast<socklen_t>(sizeof opt));
+    setsockopt(listenfd, SOL_SOCKET, SO_KEEPALIVE, &opt, static_cast<socklen_t>(sizeof opt));*/
+    Socket servsock(createnonblocking());
+    servsock.setreuseaddr(true);
+    servsock.settcpnodelay(true);
+    servsock.setreuseport(true);
+    servsock.setkeepalive(true);
 
-    /*struct sockaddr_in servaddr;
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = inet_addr(argv[1]);
-    servaddr.sin_port = htons(atoi(argv[2]));*/
     InetAddress servaddr(argv[1], atoi(argv[2]));
 
-    if (bind(listenfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
+    /*if (bind(listenfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
     {
         perror("bind() failed");
         close(listenfd);
@@ -51,15 +53,18 @@ int main(int argc, char *argv[])
         perror("listen() failed");
         close(listenfd);
         return -1;
-    }
+    }*/
+    servsock.bind(servaddr);
+    servsock.listen();
+
 
     int epollfd = epoll_create(1);
 
     struct epoll_event ev;
-    ev.data.fd = listenfd;
+    ev.data.fd = servsock.fd();
     ev.events = EPOLLIN;
 
-    epoll_ctl(epollfd, EPOLL_CTL_ADD, listenfd, &ev);
+    epoll_ctl(epollfd, EPOLL_CTL_ADD, servsock.fd(), &ev);
 
     struct epoll_event evs[10];
 
@@ -81,18 +86,20 @@ int main(int argc, char *argv[])
 
         for (int ii = 0; ii < infds; ii++)
         {
-            if (evs[ii].data.fd == listenfd)
+            if (evs[ii].data.fd == servsock.fd())
             {
-                struct sockaddr_in peeraddr;
+                /*struct sockaddr_in peeraddr;
                 socklen_t len = sizeof(peeraddr);
                 int clientfd = accept4(listenfd, (struct sockaddr *)&peeraddr, &len, SOCK_NONBLOCK);
 
                 InetAddress clientaddr(peeraddr);
-                printf("accept client(fd=%d, ip=%s, port=%d) ok.\n", clientfd, clientaddr.ip(), clientaddr.port());
+                printf("accept client(fd=%d, ip=%s, port=%d) ok.\n", clientfd, clientaddr.ip(), clientaddr.port());*/
+                InetAddress clientaddr;
+                Socket* clientsock = new Socket(servsock.accept(clientaddr));
 
-                ev.data.fd = clientfd;
+                ev.data.fd = clientsock->fd();
                 ev.events = EPOLLIN|EPOLLET;
-                epoll_ctl(epollfd, EPOLL_CTL_ADD, clientfd, &ev);
+                epoll_ctl(epollfd, EPOLL_CTL_ADD, clientsock->fd(), &ev);
             }
             else
             {
