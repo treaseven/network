@@ -1,0 +1,4 @@
+/test_net/*
+!/test_net/*.cpp
+!/test_net/*.h
+!/test_net/makefile

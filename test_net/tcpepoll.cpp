@@ -9,11 +9,7 @@
 #include <sys/fcntl.h>
 #include <netinet/tcp.h>
 #include <sys/epoll.h>
-
-void setnonblocking(int fd)
-{
-    fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
-}
+#include "InetAddress.h"
 
 int main(int argc, char *argv[])
 {
@@ -24,7 +20,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    int listenfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+    int listenfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP);
     if (listenfd < 0)
     {
         perror("socket() failed");
@@ -37,12 +33,11 @@ int main(int argc, char *argv[])
     setsockopt(listenfd, SOL_SOCKET, SO_REUSEPORT, &opt, static_cast<socklen_t>(sizeof opt));
     setsockopt(listenfd, SOL_SOCKET, SO_KEEPALIVE, &opt, static_cast<socklen_t>(sizeof opt));
 
-    setnonblocking(listenfd);
-
-    struct sockaddr_in servaddr;
+    /*struct sockaddr_in servaddr;
     servaddr.sin_family = AF_INET;
     servaddr.sin_addr.s_addr = inet_addr(argv[1]);
-    servaddr.sin_port = htons(atoi(argv[2]));
+    servaddr.sin_port = htons(atoi(argv[2]));*/
+    InetAddress servaddr(argv[1], atoi(argv[2]));
 
     if (bind(listenfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
     {
@@ -88,12 +83,12 @@ int main(int argc, char *argv[])
         {
             if (evs[ii].data.fd == listenfd)
             {
-                struct sockaddr_in clientaddr;
-                socklen_t len = sizeof(clientaddr);
-                int clientfd = accept(listenfd, (struct sockaddr *)&clientaddr, &len);
-                setnonblocking(clientfd);
+                struct sockaddr_in peeraddr;
+                socklen_t len = sizeof(peeraddr);
+                int clientfd = accept4(listenfd, (struct sockaddr *)&peeraddr, &len, SOCK_NONBLOCK);
 
-                printf("accept client(fd=%d, ip=%s, port=%d) ok.\n", clientfd, inet_ntoa(clientaddr.sin_addr), ntohs(clientaddr.sin_port));
+                InetAddress clientaddr(peeraddr);
+                printf("accept client(fd=%d, ip=%s, port=%d) ok.\n", clientfd, clientaddr.ip(), clientaddr.port());
 
                 ev.data.fd = clientfd;
                 ev.events = EPOLLIN|EPOLLET;
