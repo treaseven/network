@@ -11,6 +11,7 @@
 #include <sys/epoll.h>
 #include "InetAddress.h"
 #include "Socket.h"
+#include "Epoll.h"
 
 int main(int argc, char *argv[])
 {
@@ -21,56 +22,32 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    /*int listenfd = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, IPPROTO_TCP);
-    if (listenfd < 0)
-    {
-        perror("socket() failed");
-        return -1;
-    }
-
-    int opt = 1;
-    setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &opt, static_cast<socklen_t>(sizeof opt));
-    setsockopt(listenfd, SOL_SOCKET, TCP_NODELAY, &opt, static_cast<socklen_t>(sizeof opt));
-    setsockopt(listenfd, SOL_SOCKET, SO_REUSEPORT, &opt, static_cast<socklen_t>(sizeof opt));
-    setsockopt(listenfd, SOL_SOCKET, SO_KEEPALIVE, &opt, static_cast<socklen_t>(sizeof opt));*/
     Socket servsock(createnonblocking());
     servsock.setreuseaddr(true);
     servsock.settcpnodelay(true);
     servsock.setreuseport(true);
-    servsock.setkeepalive(true);
+    servsock.setkeepalive(true); 
 
     InetAddress servaddr(argv[1], atoi(argv[2]));
 
-    /*if (bind(listenfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0)
-    {
-        perror("bind() failed");
-        close(listenfd);
-        return -1;
-    }
-
-    if (listen(listenfd, 128) != 0)
-    {
-        perror("listen() failed");
-        close(listenfd);
-        return -1;
-    }*/
     servsock.bind(servaddr);
     servsock.listen();
 
 
-    int epollfd = epoll_create(1);
+    /*int epollfd = epoll_create(1);
 
     struct epoll_event ev;
     ev.data.fd = servsock.fd();
     ev.events = EPOLLIN;
 
-    epoll_ctl(epollfd, EPOLL_CTL_ADD, servsock.fd(), &ev);
-
-    struct epoll_event evs[10];
+    epoll_ctl(epollfd, EPOLL_CTL_ADD, servsock.fd(), &ev);*/
+    Epoll ep;
+    ep.addfd(servsock.fd(), EPOLLIN);
+    std::vector<epoll_event> evs;
 
     while(true)
     {
-        int infds = epoll_wait(epollfd, evs, 10, -1);
+        /*int infds = epoll_wait(epollfd, evs, 10, -1);
 
         if (infds < 0)
         {
@@ -82,44 +59,53 @@ int main(int argc, char *argv[])
         {
             printf("epoll_wait() timeout.\n");
             continue;
-        }
+        }*/
+        evs = ep.loop();
 
-        for (int ii = 0; ii < infds; ii++)
+        //for (int ii = 0; ii < infds; ii++)
+        for(auto &ev:evs)
         {
-            if (evs[ii].data.fd == servsock.fd())
+            /*if (evs[ii].data.fd == servsock.fd())
             {
-                /*struct sockaddr_in peeraddr;
-                socklen_t len = sizeof(peeraddr);
-                int clientfd = accept4(listenfd, (struct sockaddr *)&peeraddr, &len, SOCK_NONBLOCK);
-
-                InetAddress clientaddr(peeraddr);
-                printf("accept client(fd=%d, ip=%s, port=%d) ok.\n", clientfd, clientaddr.ip(), clientaddr.port());*/
                 InetAddress clientaddr;
                 Socket* clientsock = new Socket(servsock.accept(clientaddr));
 
                 ev.data.fd = clientsock->fd();
                 ev.events = EPOLLIN|EPOLLET;
                 epoll_ctl(epollfd, EPOLL_CTL_ADD, clientsock->fd(), &ev);
+                ep.addfd(clientsock->fd(), EPOLLIN|EPOLLET);
             }
             else
+            {*/
+            if (ev.events & EPOLLRDHUP)
             {
-                if (evs[ii].events & EPOLLRDHUP)
+                printf("client(events=%d) disconnected.\n", ev.data.fd);
+                close(ev.data.fd);
+            }
+            else if (ev.events & (EPOLLIN | EPOLLPRI))
+            {
+                if (ev.data.fd == servsock.fd())
                 {
-                    printf("client(events=%d) disconnected.\n", evs[ii].data.fd);
-                    close(evs[ii].data.fd);
+                    InetAddress clientaddr;
+                    Socket* clientsock = new Socket(servsock.accept(clientaddr));
+
+                        /*ev.data.fd = clientsock->fd();
+                        ev.events = EPOLLIN|EPOLLET;
+                        epoll_ctl(epollfd, EPOLL_CTL_ADD, clientsock->fd(), &ev);*/
+                    ep.addfd(clientsock->fd(), EPOLLIN|EPOLLET);
                 }
-                else if (evs[ii].events & (EPOLLIN | EPOLLPRI))
+                else 
                 {
                     char buffer[1024];
                     while(true)
                     {
                         bzero(&buffer, sizeof(buffer));
-                        ssize_t nread = read(evs[ii].data.fd, buffer, sizeof(buffer));
+                        ssize_t nread = read(ev.data.fd, buffer, sizeof(buffer));
 
                         if (nread > 0)
                         {
-                            printf("recv(eventfd=%d):%s\n", evs[ii].data.fd, buffer);
-                            send(evs[ii].data.fd, buffer, strlen(buffer), 0);
+                            printf("recv(eventfd=%d):%s\n", ev.data.fd, buffer);
+                            send(ev.data.fd, buffer, strlen(buffer), 0);
                         }
                         else if (nread == -1 && errno == EINTR)
                         {
@@ -131,23 +117,22 @@ int main(int argc, char *argv[])
                         }
                         else if (nread == 0)
                         {
-                            printf("client(eventfd=%d) disconnected.\n", evs[ii].data.fd);
-                            close(evs[ii].data.fd);
+                            printf("client(eventfd=%d) disconnected.\n", ev.data.fd);
+                            close(ev.data.fd);
                         }
                     }
                 }
-                else if (evs[ii].events & EPOLLOUT)
-                {
-
-                }
-                else
-                {
-                    printf("client(eventfd=%d) error.\n", evs[ii].data.fd);
-                    close(evs[ii].data.fd);
-                }
             }
+            else if (ev.events & EPOLLOUT)
+            {
+
+            }
+            else
+            {
+                printf("client(eventfd=%d) error.\n", ev.data.fd);
+                close(ev.data.fd);
+            }            
         }
     }
-
     return 0;
 }
