@@ -12,6 +12,7 @@
 #include "InetAddress.h"
 #include "Socket.h"
 #include "Epoll.h"
+#include "Channel.h"
 
 int main(int argc, char *argv[])
 {
@@ -33,66 +34,31 @@ int main(int argc, char *argv[])
     servsock.bind(servaddr);
     servsock.listen();
 
-
-    /*int epollfd = epoll_create(1);
-
-    struct epoll_event ev;
-    ev.data.fd = servsock.fd();
-    ev.events = EPOLLIN;
-
-    epoll_ctl(epollfd, EPOLL_CTL_ADD, servsock.fd(), &ev);*/
     Epoll ep;
-    ep.addfd(servsock.fd(), EPOLLIN);
-    std::vector<epoll_event> evs;
+    //ep.addfd(servsock.fd(), EPOLLIN);
+    Channel *servchannel = new Channel(&ep, servsock.fd());
+    servchannel->enablereading();
 
     while(true)
     {
-        /*int infds = epoll_wait(epollfd, evs, 10, -1);
+        std::vector<Channel *> channels = ep.loop();
 
-        if (infds < 0)
+        for(auto &ch:channels)
         {
-            perror("epoll_wait() failed");
-            break;
-        }
-
-        if (infds == 0)
-        {
-            printf("epoll_wait() timeout.\n");
-            continue;
-        }*/
-        evs = ep.loop();
-
-        //for (int ii = 0; ii < infds; ii++)
-        for(auto &ev:evs)
-        {
-            /*if (evs[ii].data.fd == servsock.fd())
+            if (ch->revents() & EPOLLRDHUP)
             {
-                InetAddress clientaddr;
-                Socket* clientsock = new Socket(servsock.accept(clientaddr));
-
-                ev.data.fd = clientsock->fd();
-                ev.events = EPOLLIN|EPOLLET;
-                epoll_ctl(epollfd, EPOLL_CTL_ADD, clientsock->fd(), &ev);
-                ep.addfd(clientsock->fd(), EPOLLIN|EPOLLET);
+                printf("client(events=%d) disconnected.\n", ch->fd());
+                close(ch->fd());
             }
-            else
-            {*/
-            if (ev.events & EPOLLRDHUP)
+            else if (ch->revents() & (EPOLLIN | EPOLLPRI))
             {
-                printf("client(events=%d) disconnected.\n", ev.data.fd);
-                close(ev.data.fd);
-            }
-            else if (ev.events & (EPOLLIN | EPOLLPRI))
-            {
-                if (ev.data.fd == servsock.fd())
+                if (ch == servchannel)
                 {
                     InetAddress clientaddr;
                     Socket* clientsock = new Socket(servsock.accept(clientaddr));
-
-                        /*ev.data.fd = clientsock->fd();
-                        ev.events = EPOLLIN|EPOLLET;
-                        epoll_ctl(epollfd, EPOLL_CTL_ADD, clientsock->fd(), &ev);*/
-                    ep.addfd(clientsock->fd(), EPOLLIN|EPOLLET);
+                    Channel *clientchannel = new Channel(&ep, clientsock->fd());
+                    clientchannel->useet();
+                    clientchannel->enablereading();
                 }
                 else 
                 {
@@ -100,12 +66,12 @@ int main(int argc, char *argv[])
                     while(true)
                     {
                         bzero(&buffer, sizeof(buffer));
-                        ssize_t nread = read(ev.data.fd, buffer, sizeof(buffer));
+                        ssize_t nread = read(ch->fd(), buffer, sizeof(buffer));
 
                         if (nread > 0)
                         {
-                            printf("recv(eventfd=%d):%s\n", ev.data.fd, buffer);
-                            send(ev.data.fd, buffer, strlen(buffer), 0);
+                            printf("recv(eventfd=%d):%s\n", ch->fd(), buffer);
+                            send(ch->fd(), buffer, strlen(buffer), 0);
                         }
                         else if (nread == -1 && errno == EINTR)
                         {
@@ -117,20 +83,20 @@ int main(int argc, char *argv[])
                         }
                         else if (nread == 0)
                         {
-                            printf("client(eventfd=%d) disconnected.\n", ev.data.fd);
-                            close(ev.data.fd);
+                            printf("client(eventfd=%d) disconnected.\n", ch->fd());
+                            close(ch->fd());
                         }
                     }
                 }
             }
-            else if (ev.events & EPOLLOUT)
+            else if (ch->revents() & EPOLLOUT)
             {
 
             }
             else
             {
-                printf("client(eventfd=%d) error.\n", ev.data.fd);
-                close(ev.data.fd);
+                printf("client(eventfd=%d) error.\n", ch->fd());
+                close(ch->fd());
             }            
         }
     }

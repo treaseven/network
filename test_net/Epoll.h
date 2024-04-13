@@ -6,6 +6,9 @@
 #include <sys/epoll.h>
 #include <vector>
 #include <unistd.h>
+#include "Channel.h"
+
+class Channel;
 
 class Epoll
 {
@@ -17,6 +20,8 @@ public:
     Epoll();
     ~Epoll();
 
-    void addfd(int fd, uint32_t op);
-    std::vector<epoll_event> loop(int timeout=-1);
+    //void addfd(int fd, uint32_t op);
+    //std::vector<epoll_event> loop(int timeout=-1);
+    void updatechannel(Channel *ch);
+    std::vector<Channel *> loop(int timeout=-1);
 };
