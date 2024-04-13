@@ -35,8 +35,7 @@ int main(int argc, char *argv[])
     servsock.listen();
 
     Epoll ep;
-    //ep.addfd(servsock.fd(), EPOLLIN);
-    Channel *servchannel = new Channel(&ep, servsock.fd());
+    Channel *servchannel = new Channel(&ep, servsock.fd(), true);
     servchannel->enablereading();
 
     while(true)
@@ -45,7 +44,8 @@ int main(int argc, char *argv[])
 
         for(auto &ch:channels)
         {
-            if (ch->revents() & EPOLLRDHUP)
+            ch->handleevent(&servsock);
+            /*if (ch->revents() & EPOLLRDHUP)
             {
                 printf("client(events=%d) disconnected.\n", ch->fd());
                 close(ch->fd());
@@ -56,6 +56,7 @@ int main(int argc, char *argv[])
                 {
                     InetAddress clientaddr;
                     Socket* clientsock = new Socket(servsock.accept(clientaddr));
+                    printf("accept client(fd=%d, ip=%s, prot=%d) ok.\n", clientsock->fd(), clientaddr.ip(), clientaddr.port());
                     Channel *clientchannel = new Channel(&ep, clientsock->fd());
                     clientchannel->useet();
                     clientchannel->enablereading();
@@ -85,6 +86,7 @@ int main(int argc, char *argv[])
                         {
                             printf("client(eventfd=%d) disconnected.\n", ch->fd());
                             close(ch->fd());
+                            break;
                         }
                     }
                 }
@@ -97,7 +99,7 @@ int main(int argc, char *argv[])
             {
                 printf("client(eventfd=%d) error.\n", ch->fd());
                 close(ch->fd());
-            }            
+            }*/           
         }
     }
     return 0;

@@ -1,6 +1,6 @@
 #include "Channel.h"
 
-Channel::Channel(Epoll *ep, int fd):ep_(ep), fd_(fd)
+Channel::Channel(Epoll *ep, int fd, bool islisten):ep_(ep), fd_(fd), islisten_(islisten)
 {
 
 }
@@ -49,4 +49,63 @@ uint32_t Channel::events()
 uint32_t Channel::revents()
 {
     return revents_;
+}
+
+void Channel::handleevent(Socket *servsock)
+{
+    if (revents_ & EPOLLRDHUP)
+    {
+        printf("client(events=%d) disconnected.\n", fd_);
+        close(fd_);
+    }
+    else if (revents_ & (EPOLLIN | EPOLLPRI))
+    {
+        if (islisten_ == true)
+        {
+            InetAddress clientaddr;
+            Socket* clientsock = new Socket(servsock->accept(clientaddr));
+            printf("accept client(fd=%d, ip=%s, prot=%d) ok.\n", clientsock->fd(), clientaddr.ip(), clientaddr.port());
+            Channel *clientchannel = new Channel(ep_, clientsock->fd(), false);
+            clientchannel->useet();
+            clientchannel->enablereading();
+        }
+        else 
+        {
+            char buffer[1024];
+            while(true)
+            {
+                bzero(&buffer, sizeof(buffer));
+                ssize_t nread = read(fd_, buffer, sizeof(buffer));
+
+                if (nread > 0)
+                {
+                    printf("recv(eventfd=%d):%s\n", fd_, buffer);
+                    send(fd_, buffer, strlen(buffer), 0);
+                }
+                else if (nread == -1 && errno == EINTR)
+                {
+                    continue;
+                }
+                else if (nread == -1 && ((errno == EAGAIN) || (errno == EWOULDBLOCK) ))
+                {
+                    break;
+                }
+                else if (nread == 0)
+                {
+                    printf("client(eventfd=%d) disconnected.\n", fd_);
+                    close(fd_);
+                    break;
+                }
+            }
+        }
+    }
+    else if (revents_ & EPOLLOUT)
+    {
+
+    }
+    else
+    {
+        printf("client(eventfd=%d) error.\n", fd_);
+        close(fd_);
+    }
 }
