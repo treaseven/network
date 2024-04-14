@@ -3,7 +3,7 @@
 Connection::Connection(EventLoop *loop, Socket *clientsock):loop_(loop), clientsock_(clientsock)
 {
     clientchannel_ = new Channel(loop_, clientsock_->fd());
-    clientchannel_->setreadcallback(std::bind(&Channel::onmessage, clientchannel_));
+    clientchannel_->setreadcallback(std::bind(&Connection::onmessage, this));
     clientchannel_->setclosecallback(std::bind(&Connection::closecallback, this));
     clientchannel_->seterrorcallback(std::bind(&Connection::errorcallback, this));
     clientchannel_->useet();
@@ -53,4 +53,35 @@ void Connection::setclosecallback(std::function<void(Connection *)> fn)
 void Connection::seterrorcallback(std::function<void(Connection *)> fn)
 {
     errorcallback_ = fn;
+}
+
+void Connection::onmessage()
+{
+    char buffer[1024];
+    while(true)
+    {
+        bzero(&buffer, sizeof(buffer));
+        ssize_t nread = read(fd(), buffer, sizeof(buffer));
+
+        if (nread > 0)
+        {
+            printf("recv(eventfd=%d):%s\n", fd(), buffer);
+            send(fd(), buffer, strlen(buffer), 0);
+        }
+        else if (nread == -1 && errno == EINTR)
+        {
+            continue;
+        }
+        else if (nread == -1 && ((errno == EAGAIN) || (errno == EWOULDBLOCK) ))
+        {
+            break;
+        }
+        else if (nread == 0)
+        {
+            //printf("client(eventfd=%d) disconnected.\n", fd_);
+            //close(fd_);
+            closecallback();
+            break;
+        }
+    }
 }

@@ -68,6 +68,7 @@ void Socket::bind(const InetAddress& servaddr)
         close(fd_);
         exit(-1);
     }
+    setipport(servaddr.ip(), servaddr.port());
 }
 
 void Socket::listen(int nn)
@@ -87,7 +88,13 @@ int Socket::accept(InetAddress& clientaddr)
     int clientfd = accept4(fd_, (struct sockaddr *)&peeraddr, &len, SOCK_NONBLOCK);
 
     clientaddr.setaddr(peeraddr);
-    ip_ = clientaddr.ip();
-    port_ = clientaddr.port();
+    //ip_ = clientaddr.ip();
+    //port_ = clientaddr.port();
     return clientfd;
+}
+
+void Socket::setipport(const std::string &ip, uint16_t port)
+{
+    ip_ = ip;
+    port_ = port;
 }

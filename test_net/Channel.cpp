@@ -75,7 +75,7 @@ void Channel::handleevent()
     }
 }
 
-void Channel::onmessage()
+/*void Channel::onmessage()
 {
     char buffer[1024];
     while(true)
@@ -104,7 +104,7 @@ void Channel::onmessage()
             break;
         }
     }
-}
+}*/
 
 void Channel::setreadcallback(std::function<void()> fn)
 {

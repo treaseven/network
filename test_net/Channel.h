@@ -31,7 +31,7 @@ public:
     uint32_t revents();
 
     void handleevent();
-    void onmessage();
+    //void onmessage();
     void setreadcallback(std::function<void()> fn);
     void setclosecallback(std::function<void()> fn);
     void seterrorcallback(std::function<void()> fn);
