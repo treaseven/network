@@ -55,8 +55,9 @@ void Channel::handleevent()
 {
     if (revents_ & EPOLLRDHUP)
     {
-        printf("client(events=%d) disconnected.\n", fd_);
-        close(fd_);
+        //printf("client(events=%d) disconnected.\n", fd_);
+        //close(fd_);
+        closecallback_();
     }
     else if (revents_ & (EPOLLIN | EPOLLPRI))
     {
@@ -68,8 +69,9 @@ void Channel::handleevent()
     }
     else
     {
-        printf("client(eventfd=%d) error.\n", fd_);
-        close(fd_);
+        //printf("client(eventfd=%d) error.\n", fd_);
+        //close(fd_);
+        errorcallback_();
     }
 }
 
@@ -96,8 +98,9 @@ void Channel::onmessage()
         }
         else if (nread == 0)
         {
-            printf("client(eventfd=%d) disconnected.\n", fd_);
-            close(fd_);
+            //printf("client(eventfd=%d) disconnected.\n", fd_);
+            //close(fd_);
+            closecallback_();
             break;
         }
     }
@@ -106,4 +109,14 @@ void Channel::onmessage()
 void Channel::setreadcallback(std::function<void()> fn)
 {
     readcallback_ = fn;
+}
+
+void Channel::setclosecallback(std::function<void()> fn)
+{
+    closecallback_ = fn;
+}
+
+void Channel::seterrorcallback(std::function<void()> fn)
+{
+    errorcallback_ = fn;
 }
