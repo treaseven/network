@@ -1,19 +1,4 @@
-#include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <arpa/inet.h>
-#include <sys/fcntl.h>
-#include <netinet/tcp.h>
-#include <sys/epoll.h>
-#include "InetAddress.h"
-#include "Socket.h"
-#include "Epoll.h"
-#include "Channel.h"
-#include "EventLoop.h"
+#include "TcpServer.h"
 
 int main(int argc, char *argv[])
 {
@@ -24,7 +9,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    Socket servsock(createnonblocking());
+    /*Socket servsock(createnonblocking());
     servsock.setreuseaddr(true);
     servsock.settcpnodelay(true);
     servsock.setreuseport(true);
@@ -40,6 +25,8 @@ int main(int argc, char *argv[])
     servchannel->setreadcallback(std::bind(&Channel::newconnection, servchannel, &servsock));
     servchannel->enablereading();
 
-    loop.run();
+    loop.run();*/
+    TcpServer tcpserver(argv[1], atoi(argv[2]));
+    tcpserver.start();
     return 0;
 }
