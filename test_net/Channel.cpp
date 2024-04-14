@@ -1,6 +1,6 @@
 #include "Channel.h"
 
-Channel::Channel(Epoll *ep, int fd):ep_(ep), fd_(fd)
+Channel::Channel(EventLoop *loop, int fd):loop_(loop), fd_(fd)
 {
 
 }
@@ -23,7 +23,7 @@ void Channel::useet()
 void Channel::enablereading()
 {
     events_ |= EPOLLIN;
-    ep_->updatechannel(this);
+    loop_->updatechannel(this);
 }
 
 void Channel::setinepoll()
@@ -78,7 +78,7 @@ void Channel::newconnection(Socket *servsock)
     InetAddress clientaddr;
     Socket* clientsock = new Socket(servsock->accept(clientaddr));
     printf("accept client(fd=%d, ip=%s, prot=%d) ok.\n", clientsock->fd(), clientaddr.ip(), clientaddr.port());
-    Channel *clientchannel = new Channel(ep_, clientsock->fd());
+    Channel *clientchannel = new Channel(loop_, clientsock->fd());
     clientchannel->setreadcallback(std::bind(&Channel::onmessage, clientchannel));
     clientchannel->useet();
     clientchannel->enablereading();   

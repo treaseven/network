@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
     servsock.listen();
 
     EventLoop loop;
-    Channel *servchannel = new Channel(loop.ep(), servsock.fd());
+    Channel *servchannel = new Channel(&loop, servsock.fd());
     servchannel->setreadcallback(std::bind(&Channel::newconnection, servchannel, &servsock));
     servchannel->enablereading();
 

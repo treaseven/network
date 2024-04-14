@@ -1,6 +1,9 @@
 #pragma once
 #include "Epoll.h"
 
+class Channel;
+class Epoll;
+
 class EventLoop
 {
 private:
@@ -10,5 +13,6 @@ public:
     ~EventLoop();
 
     void run();
-    Epoll *ep();
+    
+    void updatechannel(Channel *ch);
 };

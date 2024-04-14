@@ -23,7 +23,7 @@ void EventLoop::run()
     }
 }
 
-Epoll *EventLoop::ep()
+void EventLoop::updatechannel(Channel *ch)
 {
-    return ep_;
+    ep_->updatechannel(ch);
 }
