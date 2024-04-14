@@ -35,7 +35,8 @@ int main(int argc, char *argv[])
     servsock.listen();
 
     Epoll ep;
-    Channel *servchannel = new Channel(&ep, servsock.fd(), true);
+    Channel *servchannel = new Channel(&ep, servsock.fd());
+    servchannel->setreadcallback(std::bind(&Channel::newconnection, servchannel, &servsock));
     servchannel->enablereading();
 
     while(true)
@@ -44,62 +45,7 @@ int main(int argc, char *argv[])
 
         for(auto &ch:channels)
         {
-            ch->handleevent(&servsock);
-            /*if (ch->revents() & EPOLLRDHUP)
-            {
-                printf("client(events=%d) disconnected.\n", ch->fd());
-                close(ch->fd());
-            }
-            else if (ch->revents() & (EPOLLIN | EPOLLPRI))
-            {
-                if (ch == servchannel)
-                {
-                    InetAddress clientaddr;
-                    Socket* clientsock = new Socket(servsock.accept(clientaddr));
-                    printf("accept client(fd=%d, ip=%s, prot=%d) ok.\n", clientsock->fd(), clientaddr.ip(), clientaddr.port());
-                    Channel *clientchannel = new Channel(&ep, clientsock->fd());
-                    clientchannel->useet();
-                    clientchannel->enablereading();
-                }
-                else 
-                {
-                    char buffer[1024];
-                    while(true)
-                    {
-                        bzero(&buffer, sizeof(buffer));
-                        ssize_t nread = read(ch->fd(), buffer, sizeof(buffer));
-
-                        if (nread > 0)
-                        {
-                            printf("recv(eventfd=%d):%s\n", ch->fd(), buffer);
-                            send(ch->fd(), buffer, strlen(buffer), 0);
-                        }
-                        else if (nread == -1 && errno == EINTR)
-                        {
-                            continue;
-                        }
-                        else if (nread == -1 && ((errno == EAGAIN) || (errno == EWOULDBLOCK) ))
-                        {
-                            break;
-                        }
-                        else if (nread == 0)
-                        {
-                            printf("client(eventfd=%d) disconnected.\n", ch->fd());
-                            close(ch->fd());
-                            break;
-                        }
-                    }
-                }
-            }
-            else if (ch->revents() & EPOLLOUT)
-            {
-
-            }
-            else
-            {
-                printf("client(eventfd=%d) error.\n", ch->fd());
-                close(ch->fd());
-            }*/           
+            ch->handleevent();         
         }
     }
     return 0;

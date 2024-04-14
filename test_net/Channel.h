@@ -1,5 +1,6 @@
 #pragma once
 #include <sys/epoll.h>
+#include <functional>
 #include "Epoll.h"
 #include "Socket.h"
 
@@ -14,8 +15,9 @@ private:
     uint32_t events_ = 0;
     uint32_t revents_ = 0;
     bool islisten_ = false;
+    std::function<void()> readcallback_;
 public:
-    Channel(Epoll *ep, int fd, bool islisten);
+    Channel(Epoll *ep, int fd);
     ~Channel();
 
     int fd();
@@ -27,5 +29,8 @@ public:
     uint32_t events();
     uint32_t revents();
 
-    void handleevent(Socket *servsock);
+    void handleevent();
+    void newconnection(Socket *servsock);
+    void onmessage();
+    void setreadcallback(std::function<void()> fn);
 };
