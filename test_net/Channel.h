@@ -10,12 +10,10 @@ class Channel
 {
 private:
     int fd_ = -1;
-    //Epoll *ep_ = nullptr;
     EventLoop *loop_ = nullptr;
     bool inepoll_ = false;
     uint32_t events_ = 0;
     uint32_t revents_ = 0;
-    bool islisten_ = false;
     std::function<void()> readcallback_;
 public:
     Channel(EventLoop *loop, int fd);
