@@ -13,6 +13,7 @@
 #include "Socket.h"
 #include "Epoll.h"
 #include "Channel.h"
+#include "EventLoop.h"
 
 int main(int argc, char *argv[])
 {
@@ -34,19 +35,11 @@ int main(int argc, char *argv[])
     servsock.bind(servaddr);
     servsock.listen();
 
-    Epoll ep;
-    Channel *servchannel = new Channel(&ep, servsock.fd());
+    EventLoop loop;
+    Channel *servchannel = new Channel(loop.ep(), servsock.fd());
     servchannel->setreadcallback(std::bind(&Channel::newconnection, servchannel, &servsock));
     servchannel->enablereading();
 
-    while(true)
-    {
-        std::vector<Channel *> channels = ep.loop();
-
-        for(auto &ch:channels)
-        {
-            ch->handleevent();         
-        }
-    }
+    loop.run();
     return 0;
 }
