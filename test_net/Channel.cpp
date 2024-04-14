@@ -1,5 +1,4 @@
 #include "Channel.h"
-#include "Connection.h"
 
 Channel::Channel(EventLoop *loop, int fd):loop_(loop), fd_(fd)
 {
@@ -72,15 +71,6 @@ void Channel::handleevent()
         printf("client(eventfd=%d) error.\n", fd_);
         close(fd_);
     }
-}
-
-void Channel::newconnection(Socket *servsock)
-{
-    InetAddress clientaddr;
-    Socket* clientsock = new Socket(servsock->accept(clientaddr));
-    printf("accept client(fd=%d, ip=%s, prot=%d) ok.\n", clientsock->fd(), clientaddr.ip(), clientaddr.port());
-
-    Connection *conn = new Connection(loop_, clientsock);
 }
 
 void Channel::onmessage()
