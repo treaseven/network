@@ -8,7 +8,11 @@ TcpServer::TcpServer(const std::string &ip, const uint16_t port)
 
 TcpServer::~TcpServer()
 {
-
+    delete acceptor_;
+    for (auto &aa:conns_)
+    {
+        delete aa.second;
+    }
 }
 
 void TcpServer::start()
@@ -19,4 +23,7 @@ void TcpServer::start()
 void TcpServer::newconnection(Socket *clientsock)
 {
     Connection *conn = new Connection(&loop_, clientsock);
+
+    printf("new connection(fd=%d, ip=%s, port=%d) ok.\n", conn->fd(), conn->ip().c_str(), conn->port());
+    conns_[conn->fd()] = conn;
 }

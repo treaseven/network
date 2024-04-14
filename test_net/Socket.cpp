@@ -26,6 +26,16 @@ int Socket::fd() const
     return fd_;
 }
 
+std::string Socket::ip() const
+{
+    return ip_;
+}
+
+uint16_t Socket::port() const
+{
+    return port_;
+}
+
 void Socket::setreuseaddr(bool on)
 {
     int optval = on?1:0;
@@ -77,5 +87,7 @@ int Socket::accept(InetAddress& clientaddr)
     int clientfd = accept4(fd_, (struct sockaddr *)&peeraddr, &len, SOCK_NONBLOCK);
 
     clientaddr.setaddr(peeraddr);
+    ip_ = clientaddr.ip();
+    port_ = clientaddr.port();
     return clientfd;
 }
