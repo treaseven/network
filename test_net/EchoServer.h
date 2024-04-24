@@ -15,6 +15,6 @@ public:
     void HandleNewConnection(Connection *conn);
     void HandleClose(Connection *conn);
     void HandleError(Connection *conn);
-    void HandleMessage(Connection *conn, std::string message);
+    void HandleMessage(Connection *conn, std::string& message);
     void HandleSendComplete(Connection *conn);
 };

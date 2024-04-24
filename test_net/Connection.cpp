@@ -34,15 +34,11 @@ uint16_t Connection::port() const
 
 void Connection::closecallback()
 {
-    //printf("client(eventfd=%d) disconnected.\n", fd());
-    //close(fd());
     closecallback_(this);
 }
 
 void Connection::errorcallback()
 {
-    //printf("client(eventfd=%d) error.\n", fd());
-    //close(fd());
     errorcallback_(this);
 }
 
@@ -56,7 +52,7 @@ void Connection::seterrorcallback(std::function<void(Connection *)> fn)
     errorcallback_ = fn;
 }
 
-void Connection::setonmessagecallback(std::function<void(Connection *, std::string)> fn)
+void Connection::setonmessagecallback(std::function<void(Connection *, std::string&)> fn)
 {
     onmessagecallback_ = fn;
 }
@@ -117,7 +113,7 @@ void Connection::onmessage()
 
 void Connection::send(const char *data, size_t size)
 {
-    outputbuffer_.append(data, size);
+    outputbuffer_.appendwithhead(data, size);
     clientchannel_->enablewriting();
 }
 
