@@ -33,6 +33,5 @@ public:
     void setclosecallback(std::function<void(Connection *)> fn);
     void seterrorcallback(std::function<void(Connection *)> fn);
     void setonmessagecallback(std::function<void(Connection *, std::string)> fn);
-
     void send(const char *data, size_t size);
 };

@@ -85,6 +85,7 @@ void Connection::onmessage()
             //outputbuffer_ = inputbuffer_;
             //inputbuffer_.clear();
             //send(fd(), outputbuffer_.data(), outputbuffer_.size(), 0);
+
             while(true)
             {
                 int len;
@@ -95,7 +96,6 @@ void Connection::onmessage()
                 inputbuffer_.erase(0, len+4);
 
                 printf("message(eventfd=%d):%s\n", fd(), message.c_str());
-
                 onmessagecallback_(this, message);
             }
             break;
