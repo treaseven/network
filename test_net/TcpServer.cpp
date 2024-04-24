@@ -31,12 +31,15 @@ void TcpServer::newconnection(Socket *clientsock)
     conn->setsendcompletecallback(std::bind(&TcpServer::sendcomplete, this, std::placeholders::_1));
     printf("new connection(fd=%d, ip=%s, port=%d) ok.\n", conn->fd(), conn->ip().c_str(), conn->port());
     conns_[conn->fd()] = conn;
+
+    if(newconnectioncb_) newconnectioncb_(conn);
 }
 
 void TcpServer::closeconnection(Connection *conn)
 {
     printf("client(eventfd=%d) disconnected.\n", conn->fd());
     //close(fd());
+    if(closeconnectioncb_) closeconnectioncb_(conn);
     conns_.erase(conn->fd());
     delete conn;
 }
@@ -45,27 +48,54 @@ void TcpServer::errorconnection(Connection *conn)
 {
     printf("client(eventfd=%d) error.\n", conn->fd());
     //close(fd());
+    if(errorconnectioncb_) errorconnectioncb_(conn);
     conns_.erase(conn->fd());
     delete conn;
 }
 
 void TcpServer::onmessage(Connection *conn, std::string message)
 {
-    message = "reply:" + message;
-
-    int len = message.size();
-    std::string tmpbuf((char *)&len, 4);
-    tmpbuf.append(message);
-    conn->send(tmpbuf.data(), tmpbuf.size());
-
+    if(onmessagecb_) onmessagecb_(conn, message);
 }
 
 void TcpServer::sendcomplete(Connection *conn)
 {
     printf("send complete.\n");
+
+    if (sendcompletecb_) sendcompletecb_(conn);
 }
 
 void TcpServer::epolltimeout(EventLoop *loop)
 {
-    printf("epoll_wait() timeout.\n");
+    if(timeoutcb_) timeoutcb_(loop);
+}
+
+void TcpServer::setnewconnectioncb(std::function<void(Connection *)> fn)
+{
+    newconnectioncb_ = fn;
+}
+
+void TcpServer::setcloseconnectioncb(std::function<void(Connection *)> fn)
+{
+    closeconnectioncb_ = fn;
+}
+
+void TcpServer::seterrorconnectioncb(std::function<void(Connection *)> fn)
+{
+    errorconnectioncb_ = fn;
+}
+
+void TcpServer::setonmessagecb(std::function<void(Connection *, std::string &message)> fn)
+{
+    onmessagecb_ = fn;
+}
+
+void TcpServer::setsendcompletecb(std::function<void(Connection *)> fn)
+{
+    sendcompletecb_ = fn;
+}
+
+void TcpServer::settimeoutcb(std::function<void(EventLoop *)> fn)
+{
+    timeoutcb_ = fn;
 }
