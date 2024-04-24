@@ -1,4 +1,6 @@
 #include "EventLoop.h"
+#include <unistd.h>
+#include <sys/syscall.h>
 
 EventLoop::EventLoop():ep_(new Epoll)
 {
