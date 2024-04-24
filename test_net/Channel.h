@@ -2,6 +2,7 @@
 #include <sys/epoll.h>
 #include <functional>
 #include "Socket.h"
+#include "InetAddress.h"
 #include "EventLoop.h"
 
 class EventLoop;
@@ -17,6 +18,7 @@ private:
     std::function<void()> readcallback_;
     std::function<void()> closecallback_;
     std::function<void()> errorcallback_;
+    std::function<void()> writecallback_;
 public:
     Channel(EventLoop *loop, int fd);
     ~Channel();
@@ -24,6 +26,9 @@ public:
     int fd();
     void useet();
     void enablereading();
+    void disablereading();
+    void enablewriting();
+    void disablewriting();
     void setinepoll();
     void setrevents(uint32_t ev);
     bool inpoll();
@@ -35,4 +40,5 @@ public:
     void setreadcallback(std::function<void()> fn);
     void setclosecallback(std::function<void()> fn);
     void seterrorcallback(std::function<void()> fn);
+    void setwritecallback(std::function<void()> fn);
 };

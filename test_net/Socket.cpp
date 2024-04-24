@@ -71,6 +71,12 @@ void Socket::bind(const InetAddress& servaddr)
     setipport(servaddr.ip(), servaddr.port());
 }
 
+void Socket::setipport(const std::string &ip, uint16_t port)
+{
+    ip_ = ip;
+    port_ = port;
+}
+
 void Socket::listen(int nn)
 {
     if(::listen(fd_, nn) != 0)
@@ -91,10 +97,4 @@ int Socket::accept(InetAddress& clientaddr)
     //ip_ = clientaddr.ip();
     //port_ = clientaddr.port();
     return clientfd;
-}
-
-void Socket::setipport(const std::string &ip, uint16_t port)
-{
-    ip_ = ip;
-    port_ = port;
 }

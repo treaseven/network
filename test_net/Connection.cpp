@@ -6,6 +6,7 @@ Connection::Connection(EventLoop *loop, Socket *clientsock):loop_(loop), clients
     clientchannel_->setreadcallback(std::bind(&Connection::onmessage, this));
     clientchannel_->setclosecallback(std::bind(&Connection::closecallback, this));
     clientchannel_->seterrorcallback(std::bind(&Connection::errorcallback, this));
+    clientchannel_->setwritecallback(std::bind(&Connection::writecallback, this));
     clientchannel_->useet();
     clientchannel_->enablereading();
 }
@@ -55,6 +56,11 @@ void Connection::seterrorcallback(std::function<void(Connection *)> fn)
     errorcallback_ = fn;
 }
 
+void Connection::setonmessagecallback(std::function<void(Connection *, std::string)> fn)
+{
+    onmessagecallback_ = fn;
+}
+
 void Connection::onmessage()
 {
     char buffer[1024];
@@ -65,8 +71,9 @@ void Connection::onmessage()
 
         if (nread > 0)
         {
-            printf("recv(eventfd=%d):%s\n", fd(), buffer);
-            send(fd(), buffer, strlen(buffer), 0);
+            //printf("recv(eventfd=%d):%s\n", fd(), buffer);
+            //send(fd(), buffer, strlen(buffer), 0);
+            inputbuffer_.append(buffer, nread);
         }
         else if (nread == -1 && errno == EINTR)
         {
@@ -74,6 +81,23 @@ void Connection::onmessage()
         }
         else if (nread == -1 && ((errno == EAGAIN) || (errno == EWOULDBLOCK) ))
         {
+            //printf("recv(eventfd=%d):%s\n", fd(), inputbuffer_.data());
+            //outputbuffer_ = inputbuffer_;
+            //inputbuffer_.clear();
+            //send(fd(), outputbuffer_.data(), outputbuffer_.size(), 0);
+            while(true)
+            {
+                int len;
+                memcpy(&len, inputbuffer_.data(), 4);
+                if(inputbuffer_.size()<len+4) break;
+
+                std::string message(inputbuffer_.data()+4, len);
+                inputbuffer_.erase(0, len+4);
+
+                printf("message(eventfd=%d):%s\n", fd(), message.c_str());
+
+                onmessagecallback_(this, message);
+            }
             break;
         }
         else if (nread == 0)
@@ -84,4 +108,18 @@ void Connection::onmessage()
             break;
         }
     }
+}
+
+void Connection::send(const char *data, size_t size)
+{
+    outputbuffer_.append(data, size);
+    clientchannel_->enablewriting();
+}
+
+void Connection::writecallback()
+{
+    int writen=::send(fd(), outputbuffer_.data(), outputbuffer_.size(), 0);
+    if (writen > 0) outputbuffer_.erase(0, writen);
+
+    if (outputbuffer_.size() == 0) clientchannel_->disablewriting();
 }
