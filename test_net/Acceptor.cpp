@@ -1,40 +1,40 @@
 #include "Acceptor.h"
 #include "Connection.h"
 
-Acceptor::Acceptor(EventLoop *Loop, const std::string &ip, const uint16_t port):loop_(Loop)
+Acceptor::Acceptor(const std::unique_ptr <EventLoop>& Loop, const std::string &ip, const uint16_t port):loop_(Loop), servsock_(createnonblocking()), acceptchannel_(loop_, servsock_.fd())
 {
-    servsock_ = new Socket(createnonblocking());
-    servsock_->setreuseaddr(true);
-    servsock_->settcpnodelay(true);
-    servsock_->setreuseport(true);
-    servsock_->setkeepalive(true); 
+    //servsock_ = new Socket(createnonblocking());
+    servsock_.setreuseaddr(true);
+    servsock_.settcpnodelay(true);
+    servsock_.setreuseport(true);
+    servsock_.setkeepalive(true); 
 
     InetAddress servaddr(ip, port);
 
-    servsock_->bind(servaddr);
-    servsock_->listen();
+    servsock_.bind(servaddr);
+    servsock_.listen();
 
-    acceptchannel_ = new Channel(loop_, servsock_->fd());
-    acceptchannel_->setreadcallback(std::bind(&Acceptor::newconnection, this));
-    acceptchannel_->enablereading();
+    //acceptchannel_ = new Channel(loop_, servsock_->fd());
+    acceptchannel_.setreadcallback(std::bind(&Acceptor::newconnection, this));
+    acceptchannel_.enablereading();
 }
 
 Acceptor::~Acceptor()
 {
-    delete servsock_;
-    delete acceptchannel_;
+    //delete servsock_;
+    //delete acceptchannel_;
 }
 
 void Acceptor::newconnection()
 {
     InetAddress clientaddr;
-    Socket* clientsock = new Socket(servsock_->accept(clientaddr));
+    std::unique_ptr<Socket> clientsock(new Socket(servsock_.accept(clientaddr)));
     //printf("accept client(fd=%d, ip=%s, prot=%d) ok.\n", clientsock->fd(), clientaddr.ip(), clientaddr.port());
     clientsock->setipport(clientaddr.ip(), clientaddr.port());
-    newconnectioncb_(clientsock);
+    newconnectioncb_(std::move(clientsock));
 }
 
-void Acceptor::setnewconnectioncb(std::function<void(Socket *)> fn)
+void Acceptor::setnewconnectioncb(std::function<void(std::unique_ptr<Socket>)> fn)
 {
     newconnectioncb_ = fn;
 }

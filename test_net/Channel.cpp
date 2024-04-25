@@ -1,6 +1,6 @@
 #include "Channel.h"
 
-Channel::Channel(EventLoop *loop, int fd):loop_(loop), fd_(fd)
+Channel::Channel(const std::unique_ptr <EventLoop>& loop, int fd):loop_(loop), fd_(fd)
 {
 
 }
@@ -85,24 +85,18 @@ void Channel::handleevent()
 {
     if (revents_ & EPOLLRDHUP)
     {
-        printf("EPOLLRDHUP.\n");
-        //remove();
         closecallback_();
     }
     else if (revents_ & (EPOLLIN | EPOLLPRI))
     {
-        printf("EPOLLIN | EPOLLPRI.\n");
         readcallback_();
     }
     else if (revents_ & EPOLLOUT)
     {
-        printf("EPOLLOUT.\n");
         writecallback_();
     }
     else
     {
-        printf("others.\n");
-        //remove();
         errorcallback_();
     }
 }
