@@ -44,6 +44,18 @@ void Channel::disablewriting()
     loop_->updatechannel(this);
 }
 
+void Channel::disableall()
+{
+    events_ = 0;
+    loop_->updatechannel(this);
+}
+
+void Channel::remove()
+{
+    disableall();
+    loop_->removechannel(this);
+}
+
 void Channel::setinepoll()
 {
     inepoll_ = true;
@@ -73,22 +85,24 @@ void Channel::handleevent()
 {
     if (revents_ & EPOLLRDHUP)
     {
-        //printf("client(events=%d) disconnected.\n", fd_);
-        //close(fd_);
+        printf("EPOLLRDHUP.\n");
+        //remove();
         closecallback_();
     }
     else if (revents_ & (EPOLLIN | EPOLLPRI))
     {
+        printf("EPOLLIN | EPOLLPRI.\n");
         readcallback_();
     }
     else if (revents_ & EPOLLOUT)
     {
+        printf("EPOLLOUT.\n");
         writecallback_();
     }
     else
     {
-        //printf("client(eventfd=%d) error.\n", fd_);
-        //close(fd_);
+        printf("others.\n");
+        //remove();
         errorcallback_();
     }
 }

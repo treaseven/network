@@ -19,34 +19,36 @@ void EchoServer::Start()
     tcpserver_.start();
 }
 
-void EchoServer::HandleNewConnection(Connection *conn)
+void EchoServer::HandleNewConnection(spConnection conn)
 {
     std::cout << "New Connection Come in" << std::endl;
     //printf("void EchoServer::HandleNewConnection() thread is %ld.\n", syscall(SYS_gettid));
 }
 
-void EchoServer::HandleClose(Connection *conn)
+void EchoServer::HandleClose(spConnection conn)
 {
     std::cout << "EchoServer conn close" << std::endl;
 }
 
-void EchoServer::HandleError(Connection *conn)
+void EchoServer::HandleError(spConnection conn)
 {
     std::cout << "EchoServer conn error" << std::endl;
 }
 
-void EchoServer::HandleMessage(Connection *conn, std::string& message)
+void EchoServer::HandleMessage(spConnection conn, std::string& message)
 {
     threadpool_.addtask(std::bind(&EchoServer::OnMessage, this, conn, message));
 }
 
-void EchoServer::HandleSendComplete(Connection *conn)
+void EchoServer::HandleSendComplete(spConnection conn)
 {
     std::cout << "EchoServer send complete" << std::endl;
 }
 
-void EchoServer::OnMessage(Connection *conn, std::string& message)
+void EchoServer::OnMessage(spConnection conn, std::string& message)
 {
     message = "reply:" + message;
+    sleep(2);
+    printf("处理完业务后，将使用connection对象.\n");
     conn->send(message.data(), message.size());
 }
