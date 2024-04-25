@@ -37,7 +37,14 @@ void EchoServer::HandleError(spConnection conn)
 
 void EchoServer::HandleMessage(spConnection conn, std::string& message)
 {
-    threadpool_.addtask(std::bind(&EchoServer::OnMessage, this, conn, message));
+    if (threadpool_.size() == 0)
+    {
+        OnMessage(conn, message);
+    }
+    else
+    {
+        threadpool_.addtask(std::bind(&EchoServer::OnMessage, this, conn, message));
+    }
 }
 
 void EchoServer::HandleSendComplete(spConnection conn)

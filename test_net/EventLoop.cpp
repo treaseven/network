@@ -2,7 +2,8 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 
-EventLoop::EventLoop():ep_(new Epoll)
+EventLoop::EventLoop()
+            :ep_(new Epoll), wakeupfd_(eventfd(0, EFD_NONBLOCK)), wakechannel_(new Channel(this, wakeupfd_))
 {
 
 }
@@ -45,4 +46,43 @@ void EventLoop::removechannel(Channel *ch)
 void EventLoop::setepolltimeoutcallback(std::function<void(EventLoop *)> fn)
 {
     epolltimeoutcallback_ = fn;
+}
+
+bool EventLoop::isinloopthread()
+{
+    return threadid_ == syscall(SYS_gettid);
+}
+
+void EventLoop::queueinloop(std::function<void()> fn)
+{
+    {
+        std::lock_guard<std::mutex> gd(mutex_);
+        taskqueue_.push(fn);
+    }
+
+    wakeup();
+}
+
+void EventLoop::wakeup()
+{
+    uint64_t val = 1;
+    write(wakeupfd_, &val, sizeof(val));
+}
+
+void EventLoop::handlewakeup()
+{
+    printf("handlewakeup() thread id is %ld.\n", syscall(SYS_gettid));
+    uint64_t val;
+    read(wakeupfd_, &val, sizeof(val));
+
+    std::function<void()> fn;
+
+    std::lock_guard<std::mutex> gd(mutex_);
+
+    while(taskqueue_.size() > 0)
+    {
+        fn = std::move(taskqueue_.front());
+        taskqueue_.pop();
+        fn();
+    }
 }

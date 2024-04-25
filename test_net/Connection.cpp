@@ -1,6 +1,6 @@
 #include "Connection.h"
 
-Connection::Connection(const std::unique_ptr <EventLoop>& loop, std::unique_ptr<Socket> clientsock):loop_(loop), clientsock_(std::move(clientsock)), disconnect_(false), clientchannel_(new Channel(loop_, clientsock_->fd()))
+Connection::Connection(EventLoop* loop, std::unique_ptr<Socket> clientsock):loop_(loop), clientsock_(std::move(clientsock)), disconnect_(false), clientchannel_(new Channel(loop_, clientsock_->fd()))
 {
     //clientchannel_ = new Channel(loop_, clientsock_->fd());
     clientchannel_->setreadcallback(std::bind(&Connection::onmessage, this));
@@ -112,6 +112,20 @@ void Connection::send(const char *data, size_t size)
         printf("客户端连接已经断开了, send()直接返回.\n");
         return;
     }
+    
+    if (loop_->isinloopthread())
+    {
+        printf("send() 在事件循环的线程中.\n");
+    }
+    else
+    {
+        printf("send() 不在事件循环的线程中.\n");
+        loop_->queueinloop(std::bind(&Connection::sendinloop, this, data, size));
+    }
+}
+
+void Connection::sendinloop(const char *data, size_t size)
+{
     outputbuffer_.appendwithhead(data, size);
     clientchannel_->enablewriting();
 }
