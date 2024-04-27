@@ -13,7 +13,7 @@ int main(int argc, char *argv[])
     if (argc != 3)
     {
         printf("usage:./client ip port\n");
-        printf("example:./client 172.20.10.8 5085\n");
+        printf("example:./client 192.168.31.176 5085\n");
         return -1;
     }
 
@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
 
     printf("connect ok.\n");
 
-    for(int ii = 0; ii < 1; ii++)
+    for(int ii = 0; ii < 10; ii++)
     {
         memset(buf, 0, sizeof(buf));
         //printf("please input:");
@@ -55,16 +55,14 @@ int main(int argc, char *argv[])
         memcpy(tmpbuf+4, buf, len);
 
         send(sockfd, tmpbuf, len+4, 0);
-    }
 
-    for (int ii = 0; ii < 1; ii++)
-    {
-        int len;
         recv(sockfd, &len, 4, 0);
         memset(buf, 0, sizeof(buf));
         recv(sockfd, buf, len, 0);
 
         printf("recv:%s\n", buf);
+
+        sleep(1);
     }
 
     sleep(100);

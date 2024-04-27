@@ -93,6 +93,7 @@ void Connection::onmessage()
                 inputbuffer_.erase(0, len+4);
 
                 printf("message(eventfd=%d):%s\n", fd(), message.c_str());
+                lasttime_ = Timestamp::now();
                 onmessagecallback_(shared_from_this(), message);
             }
             break;
