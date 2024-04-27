@@ -13,7 +13,7 @@ Connection::Connection(EventLoop* loop, std::unique_ptr<Socket> clientsock):loop
 
 Connection::~Connection()
 {
-    printf("conn已析构.\n");
+
 }
 
 int Connection::fd() const
@@ -116,11 +116,10 @@ void Connection::send(const char *data, size_t size)
     
     if (loop_->isinloopthread())
     {
-        printf("send() 在事件循环的线程中.\n");
+        sendinloop(data, size);
     }
     else
     {
-        printf("send() 不在事件循环的线程中.\n");
         loop_->queueinloop(std::bind(&Connection::sendinloop, this, data, size));
     }
 }

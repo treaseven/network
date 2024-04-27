@@ -35,7 +35,7 @@ void Epoll::updatechannel(Channel *ch)
             perror("epoll_ctl() failed.\n");
             exit(-1);
         }
-        ch->setinepoll();
+        ch->setinepoll(true);
     }
 }
 

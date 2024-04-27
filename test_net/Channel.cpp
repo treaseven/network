@@ -56,9 +56,9 @@ void Channel::remove()
     loop_->removechannel(this);
 }
 
-void Channel::setinepoll()
+void Channel::setinepoll(bool inepoll)
 {
-    inepoll_ = true;
+    inepoll_ = inepoll;
 }
 
 void Channel::setrevents(uint32_t ev)

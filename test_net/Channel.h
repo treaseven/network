@@ -32,7 +32,7 @@ public:
     void disablewriting();
     void disableall();
     void remove();
-    void setinepoll();
+    void setinepoll(bool inepoll);
     void setrevents(uint32_t ev);
     bool inpoll();
     uint32_t events();

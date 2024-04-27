@@ -14,7 +14,6 @@ TcpServer::TcpServer(const std::string &ip, const uint16_t port, int threadnum)
         subloops_[ii]->setepolltimeoutcallback(std::bind(&TcpServer::epolltimeout, this, std::placeholders::_1));
         subloops_[ii]->settimercallback(std::bind(&TcpServer::removeconn, this, std::placeholders::_1));
         threadpool_.addtask(std::bind(&EventLoop::run, subloops_[ii].get()));
-        sleep(1);
     }
 }
 
@@ -38,6 +37,21 @@ void TcpServer::start()
     mainloop_->run();
 }
 
+void TcpServer::stop()
+{
+    mainloop_->stop();
+    printf("主事件循环已停止.\n");
+
+    for(int ii = 0; ii < threadnum_; ii++)
+    {
+        subloops_[ii]->stop();
+    }
+    printf("从事件循环已停止.\n");
+
+    threadpool_.stop();
+    printf("IO线程池停止.\n");
+}
+
 void TcpServer::newconnection(std::unique_ptr<Socket> clientsock)
 {
     spConnection conn(new Connection(subloops_[clientsock->fd()%threadnum_].get(), std::move(clientsock)));
@@ -46,7 +60,6 @@ void TcpServer::newconnection(std::unique_ptr<Socket> clientsock)
     conn->seterrorcallback(std::bind(&TcpServer::errorconnection, this, std::placeholders::_1));
     conn->setonmessagecallback(std::bind(&TcpServer::onmessage, this, std::placeholders::_1, std::placeholders::_2));
     conn->setsendcompletecallback(std::bind(&TcpServer::sendcomplete, this, std::placeholders::_1));
-    printf("new connection(fd=%d, ip=%s, port=%d) ok.\n", conn->fd(), conn->ip().c_str(), conn->port());
 
     {
         std::lock_guard<std::mutex> gd(mmtuex_);
@@ -54,14 +67,16 @@ void TcpServer::newconnection(std::unique_ptr<Socket> clientsock)
     }
 
     subloops_[conn->fd()%threadnum_]->newconnection(conn);
+    //printf("TcpServer::newconnection() thread is %ld.\n", syscall(SYS_gettid));
 
     if(newconnectioncb_) newconnectioncb_(conn);
 }
 
 void TcpServer::closeconnection(spConnection conn)
 {
-    printf("client(eventfd=%d) disconnected.\n", conn->fd());
+
     if(closeconnectioncb_) closeconnectioncb_(conn);
+
     {
         std::lock_guard<std::mutex> gd(mmtuex_);
         conns_.erase(conn->fd());
@@ -71,8 +86,8 @@ void TcpServer::closeconnection(spConnection conn)
 
 void TcpServer::errorconnection(spConnection conn)
 {
-    printf("client(eventfd=%d) error.\n", conn->fd());
     if(errorconnectioncb_) errorconnectioncb_(conn);
+
     {
         std::lock_guard<std::mutex> gd(mmtuex_);
         conns_.erase(conn->fd());
@@ -129,6 +144,7 @@ void TcpServer::settimeoutcb(std::function<void(EventLoop *)> fn)
 
 void TcpServer::removeconn(int fd)
 {
+
     {
         std::lock_guard<std::mutex> gd(mmtuex_);
         conns_.erase(fd);
