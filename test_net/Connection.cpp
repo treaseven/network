@@ -13,7 +13,7 @@ Connection::Connection(EventLoop* loop, std::unique_ptr<Socket> clientsock):loop
 
 Connection::~Connection()
 {
-
+    printf("conn已析构.\n");
 }
 
 int Connection::fd() const
@@ -141,4 +141,9 @@ void Connection::writecallback()
         clientchannel_->disablewriting();
         sendcompletecallback_(shared_from_this());
     }
+}
+
+bool Connection::timeout(time_t now, int val)
+{
+    return now - lasttime_.toint()>val;
 }
