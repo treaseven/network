@@ -83,14 +83,10 @@ void Connection::onmessage()
         }
         else if (nread == -1 && ((errno == EAGAIN) || (errno == EWOULDBLOCK) ))
         {
+            std::string message;
             while(true)
             {
-                int len;
-                memcpy(&len, inputbuffer_.data(), 4);
-                if(inputbuffer_.size()<len+4) break;
-
-                std::string message(inputbuffer_.data()+4, len);
-                inputbuffer_.erase(0, len+4);
+                if (inputbuffer_.pickmessage(message) == false) break;
 
                 printf("message(eventfd=%d):%s\n", fd(), message.c_str());
                 lasttime_ = Timestamp::now();
@@ -126,7 +122,7 @@ void Connection::send(const char *data, size_t size)
 
 void Connection::sendinloop(const char *data, size_t size)
 {
-    outputbuffer_.appendwithhead(data, size);
+    outputbuffer_.appendwithsep(data, size);
     clientchannel_->enablewriting();
 }
 

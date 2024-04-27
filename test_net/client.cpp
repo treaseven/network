@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
 
     printf("connect ok.\n");
 
-    for(int ii = 0; ii < 10; ii++)
+    /*for(int ii = 0; ii < 10; ii++)
     {
         memset(buf, 0, sizeof(buf));
         //printf("please input:");
@@ -62,6 +62,20 @@ int main(int argc, char *argv[])
 
         printf("recv:%s\n", buf);
 
+        sleep(1);
+    }*/
+
+    for(int ii = 0; ii < 10; ii++)
+    {
+        memset(buf, 0, sizeof(buf));
+        sprintf(buf, "这是第%d个报文", ii);
+
+        send(sockfd, buf, strlen(buf), 0);
+
+        memset(buf, 0, sizeof(buf));
+        recv(sockfd, buf, 1024, 0);
+
+        printf("recv:%s\n", buf);
         sleep(1);
     }
 
